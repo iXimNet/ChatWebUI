@@ -48,7 +48,11 @@ API_SYSTEM_PROMPT="You are a helpful assistant. Today's date is {{date}}."
     ```bash
     npm install
     ```
-3.  Create and configure your `.env` file as described above.
+3.  Create your `.env` file by copying the example:
+    ```bash
+    cp .env.example .env
+    ```
+4.  Edit the `.env` file with your specific API details (API_BASE_URL, API_KEY, etc.).
 
 ## Running the Application
 
