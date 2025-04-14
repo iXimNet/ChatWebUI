@@ -24,17 +24,17 @@ API_BASE_URL=https://your-api-endpoint.com/v1
 # Required: Your API Key for the service
 API_KEY=your_api_key_here
 
-# Optional: The model name to use (defaults to gpt-3.5-turbo)
-# MODEL_NAME=gpt-4
+# The model name to use (defaults to gpt-3.5-turbo)
+MODEL_NAME=gpt-4
 
 # Optional: The system prompt to send with each request. {{date}} will be replaced with the current date.
 API_SYSTEM_PROMPT="You are a helpful assistant. Today's date is {{date}}."
 
 # Optional: Port for the local server (defaults to 3000)
-# PORT=3001
+PORT=3000
 
 # Optional: Set to true to enable logging of raw API responses to api_response.log
-# API_LOG=true
+API_LOG=false
 ```
 
 ## Setup and Installation
