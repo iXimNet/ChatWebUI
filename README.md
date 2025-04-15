@@ -63,5 +63,5 @@ API_LOG=false
 2.  Open your web browser and navigate to `http://localhost:PORT` (replace `PORT` with the value in your `.env` file or the default 3000).
 
 ## Usage
-
+![ChatWebUI screenshot](ChatWebUI.png)
 Type your message in the input box at the bottom and press Enter or click the Send button. The assistant's response will appear in the chat window. Use the copy buttons on assistant messages to copy the content.
