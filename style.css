@@ -33,6 +33,11 @@ body {
     overflow: scroll;
     padding: 20px;
     padding-bottom: 60px;
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* IE/Edge */
+}
+#chat-box::-webkit-scrollbar {
+    display: none; /* Chrome/Safari */
 }
 
 .message {
