@@ -318,7 +318,7 @@ async function sendMessage() {
 
     try {
         // 使用fetch API进行POST请求
-        const response = await fetch('/api/chat', {
+        const response = await fetch('api/chat', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json; charset=utf-8'
