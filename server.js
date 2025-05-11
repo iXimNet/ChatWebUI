@@ -11,7 +11,8 @@ const apilog = process.env.API_LOG || false;
 // 配置中间件
 app.use(cors());
 app.use(express.json());
-app.use(express.static(path.join(__dirname)));
+// Serve static files only from the 'public' directory
+app.use(express.static(path.join(__dirname, 'public')));
 
 // API代理路由
 app.use('/api', async (req, res) => {
@@ -89,6 +90,11 @@ app.use('/api', async (req, res) => {
       res.setHeader('Cache-Control', 'no-cache');
       res.setHeader('Connection', 'keep-alive');
       res.flushHeaders(); // Important for SSE
+
+      // Attempt to disable Nagle's algorithm for the response socket
+      if (res.socket) {
+        res.socket.setNoDelay(true);
+      }
 
       const reader = apiResponse.body.getReader();
       const decoder = new TextDecoder();
@@ -172,8 +178,13 @@ app.use('/api', async (req, res) => {
 });
 
 // 静态文件服务
+// All static assets are now served by express.static from the 'public' directory.
+// This catch-all for index.html should now point to the 'public' directory as well.
 app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, 'index.html'));
+  // Check if the request is for a file that should exist in public (e.g. index.html)
+  // or if it's a route for a single-page application.
+  // For a simple setup, always serving index.html for non-API GET requests is common.
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
 app.listen(PORT, () => {
