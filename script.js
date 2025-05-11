@@ -336,79 +336,140 @@ async function sendMessage() {
         const decoder = new TextDecoder('utf-8');
         let assistantReasoningMessage = '';
         let assistantAnswerMessage = '';
+        let buffer = ''; // Buffer to accumulate incoming data
 
         while (true) {
             const { done, value } = await reader.read();
             if (done) {
-                break;
+                // Process any remaining data in the buffer as the final event
+                if (buffer.trim()) {
+                    let accumulatedJsonInLastChunk = "";
+                    const lines = buffer.split('\n');
+                    for (const line of lines) {
+                        if (line.startsWith('data:')) {
+                            let payload = line.substring(5); // Get everything after "data:"
+                            if (payload.startsWith(' ')) {
+                                payload = payload.substring(1); // Remove leading space if present
+                            }
+                            accumulatedJsonInLastChunk += payload;
+                        }
+                    }
+
+                    if (accumulatedJsonInLastChunk && accumulatedJsonInLastChunk !== '[DONE]') {
+                        try {
+                            const data = JSON.parse(accumulatedJsonInLastChunk);
+                            processData(data);
+                        } catch (e) {
+                            console.error('Error parsing remaining JSON from buffer:', e, accumulatedJsonInLastChunk);
+                            // Optionally, display an error message to the user for the final chunk
+                            // appendMessage('assistant', `错误：解析最后的数据块时出错`);
+                        }
+                    }
+                }
+                break; // Stream finished
             }
 
-            const chunk = decoder.decode(value, { stream: true });
-            const lines = chunk.split('\n');
+            buffer += decoder.decode(value, { stream: true });
+            let eventEndIndex;
 
-            for (const line of lines) {
-                if (line.startsWith('data: ')) {
-                    const data = JSON.parse(line.slice(6));
-                    if (data.choices && data.choices[0]) {
-                        const choice = data.choices[0];
+            // Process complete events (ending with \n\n)
+            while ((eventEndIndex = buffer.indexOf('\n\n')) !== -1) {
+                const eventStr = buffer.substring(0, eventEndIndex);
+                buffer = buffer.substring(eventEndIndex + 2); // Remove processed event and \n\n
 
-                        // 处理正常消息内容
-                        if (choice.delta) {
-                            if (choice.delta.reasoning_content) {
-                                assistantReasoningMessage += choice.delta.reasoning_content;
-                                appendMessage('assistant', assistantReasoningMessage, true, true);
-                            }
-                            else if (choice.delta.content) {
-                                assistantAnswerMessage += choice.delta.content;
-                                appendMessage('assistant', assistantAnswerMessage, true, false);
-                            }
-                            // appendMessage('assistant', assistantMessage, true);
-                            // 隐藏加载动画
-                            spinner.classList.add('hidden');
-                            // chatBox.removeChild(spinner);
+                let accumulatedJsonInEvent = "";
+                const lines = eventStr.split('\n');
+                for (const line of lines) {
+                    if (line.startsWith('data:')) {
+                        let payload = line.substring(5); // Get everything after "data:"
+                        if (payload.startsWith(' ')) {
+                            payload = payload.substring(1); // Remove leading space if present
                         }
+                        accumulatedJsonInEvent += payload;
+                    }
+                    // Other SSE fields like 'id:', 'event:', 'retry:' could be handled here if needed
+                }
 
-                        // 处理结束标志
-                        if (choice.finish_reason === 'stop') {
-                            // 保存原始md内容
-                            mdContent = assistantAnswerMessage;
+                if (accumulatedJsonInEvent.trim() === '[DONE]') {
+                    mdContent = assistantAnswerMessage; // Save final content
+                    const lastAssistantMessageDiv = chatBox.querySelector('.assistant-message:last-child');
+                    if (lastAssistantMessageDiv) {
+                         addCopyButtonsToMessage(lastAssistantMessageDiv);
+                    }
+                    sendBtn.disabled = false;
+                    if (spinner) spinner.classList.add('hidden');
+                    return; // Exit the read loop, [DONE] received
+                }
 
-                            // 添加复制按钮
-                            const btnContainer = document.createElement('div');
-                            btnContainer.className = 'message-actions';
-
-                            const copyBtn = document.createElement('button');
-                            copyBtn.className = 'copy-btn';
-                            copyBtn.title = '复制文本';
-                            copyBtn.innerHTML = '<i class="fa-solid fa-copy"></i>';
-
-                            const copyMdBtn = document.createElement('button');
-                            copyMdBtn.className = 'copy-md-btn';
-                            copyMdBtn.title = '复制Markdown';
-                            copyMdBtn.innerHTML = '<i class="fa-brands fa-markdown"></i>';
-
-                            btnContainer.appendChild(copyBtn);
-                            btnContainer.appendChild(copyMdBtn);
-
-                            let copyDiv = chatBox.querySelector(`.assistant-message:last-child`);
-                            copyDiv.appendChild(btnContainer);
-
-
-                            sendBtn.disabled = false;
-                            return;
-                        }
+                if (accumulatedJsonInEvent) {
+                    try {
+                        const data = JSON.parse(accumulatedJsonInEvent);
+                        processData(data);
+                    } catch (e) {
+                        console.error('Error parsing JSON from event:', e, accumulatedJsonInEvent);
+                        // appendMessage('assistant', `错误：解析收到的数据时出错`);
                     }
                 }
             }
         }
 
+        function processData(data) {
+            if (data.choices && data.choices[0]) {
+                const choice = data.choices[0];
+
+                if (choice.delta) {
+                    if (choice.delta.reasoning_content) {
+                        assistantReasoningMessage += choice.delta.reasoning_content;
+                        appendMessage('assistant', assistantReasoningMessage, true, true);
+                    } else if (choice.delta.content) {
+                        assistantAnswerMessage += choice.delta.content;
+                        appendMessage('assistant', assistantAnswerMessage, true, false);
+                    }
+                    if (spinner) spinner.classList.add('hidden');
+                }
+
+                if (choice.finish_reason === 'stop') {
+                    mdContent = assistantAnswerMessage; // Save final content
+                    // Buttons are now added when [DONE] is received or stream ends
+                    // to ensure they are added only once and after all content.
+                    const lastAssistantMessageDiv = chatBox.querySelector('.assistant-message:last-child');
+                    if (lastAssistantMessageDiv) {
+                         addCopyButtonsToMessage(lastAssistantMessageDiv);
+                    }
+                    sendBtn.disabled = false;
+                    if (spinner) spinner.classList.add('hidden');
+                }
+            }
+        }
+        
+        function addCopyButtonsToMessage(messageDiv) {
+            if (!messageDiv || messageDiv.querySelector('.message-actions')) {
+                return; // Already has buttons or invalid div
+            }
+            const btnContainer = document.createElement('div');
+            btnContainer.className = 'message-actions';
+
+            const copyBtn = document.createElement('button');
+            copyBtn.className = 'copy-btn';
+            copyBtn.title = '复制文本';
+            copyBtn.innerHTML = '<i class="fa-solid fa-copy"></i>';
+
+            const copyMdBtn = document.createElement('button');
+            copyMdBtn.className = 'copy-md-btn';
+            copyMdBtn.title = '复制Markdown';
+            copyMdBtn.innerHTML = '<i class="fa-brands fa-markdown"></i>';
+
+            btnContainer.appendChild(copyBtn);
+            btnContainer.appendChild(copyMdBtn);
+            messageDiv.appendChild(btnContainer);
+        }
 
     } catch (error) {
         if (spinner) {
             spinner.classList.add('hidden');
         }
-        console.log('Error:', error);
-        appendMessage('assistant', `错误：${error.message}`); // 显示错误消息
+        console.error('Error in sendMessage:', error); // Changed console.log to console.error
+        appendMessage('assistant', `错误：${error.message}`);
     } finally {
         sendBtn.disabled = false;
     }
