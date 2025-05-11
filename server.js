@@ -85,35 +85,80 @@ app.use('/api', async (req, res) => {
       res.setHeader('Cache-Control', 'no-cache');
       res.setHeader('Connection', 'keep-alive');
 
+      res.setHeader('Content-Type', 'text/event-stream');
+      res.setHeader('Cache-Control', 'no-cache');
+      res.setHeader('Connection', 'keep-alive');
+      res.flushHeaders(); // Important for SSE
+
       const reader = apiResponse.body.getReader();
       const decoder = new TextDecoder();
+      let buffer = '';
 
-      // 创建调试日志文件
-      const fs = require('fs');
-      const logStream = fs.createWriteStream('api_response.log', { flags: 'a' });
+      // 创建调试日志文件 (如果需要)
+      let logStream;
       if (apilog) {
-        logStream.write(`[${new Date().toISOString()}] Starting API response logging\n`);
+        const fs = require('fs');
+        logStream = fs.createWriteStream('api_response.log', { flags: 'a' });
+        logStream.write(`[${new Date().toISOString()}] Starting API response logging for a new request\n`);
       }
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
 
-        const chunk = decoder.decode(value, { stream: true });
+      try {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) {
+            if (apilog && logStream) {
+              logStream.write(`[${new Date().toISOString()}] Stream finished. Remaining buffer: "${buffer}"\n`);
+            }
+            // If there's anything left in the buffer when the stream is done,
+            // send it, assuming it's the end of a message or a [DONE] signal.
+            if (buffer.length > 0) {
+              if (apilog && logStream) {
+                logStream.write(`[${new Date().toISOString()}] Writing remaining buffer: ${buffer}\n`);
+              }
+              res.write(buffer);
+            }
+            break;
+          }
 
-        if (apilog) {
-          // 记录原始响应数据
-          logStream.write(`[${new Date().toISOString()}] Raw chunk:\n${chunk}\n\n`);
+          const rawChunk = decoder.decode(value, { stream: true });
+          if (apilog && logStream) {
+            logStream.write(`[${new Date().toISOString()}] Raw chunk received:\n${rawChunk}\n---\n`);
+          }
+          buffer += rawChunk;
+
+          let eolIndex;
+          // SSE messages are separated by double newlines (\n\n)
+          while ((eolIndex = buffer.indexOf('\n\n')) >= 0) {
+            const message = buffer.substring(0, eolIndex + 2); // Include the \n\n
+            buffer = buffer.substring(eolIndex + 2);
+            if (apilog && logStream) {
+              logStream.write(`[${new Date().toISOString()}] Forwarding complete SSE message:\n${message}\n---\n`);
+            }
+            res.write(message);
+          }
         }
-
-        // 直接转发原始SSE数据
-        res.write(chunk);
+      } catch (streamError) {
+        console.error('Error while reading or processing stream:', streamError);
+        if (apilog && logStream) {
+          logStream.write(`[${new Date().toISOString()}] Error during stream processing: ${streamError.message}\nStack: ${streamError.stack}\n`);
+        }
+        // Don't try to write to res if headers already sent and errored
+      } finally {
+        if (apilog && logStream) {
+          logStream.write(`[${new Date().toISOString()}] Ending API response logging for this request.\n\n`);
+          logStream.end();
+        }
+        // Ensure res.end() is called, but only if not already ended due to an error.
+        // The 'data: [DONE]\n\n' is typically sent by the OpenAI API itself.
+        // If your specific backend API doesn't send it, you might need to add it here,
+        // but it's better if the upstream API handles the [DONE] signal.
+        // For now, we assume the upstream API sends its own [DONE] or equivalent.
+        if (!res.writableEnded) {
+          res.end();
+        }
       }
-
-      if (apilog) { logStream.end(); }
-
-      res.write('data: [DONE]\n\n');
-      res.end();
     } else {
+      // Handle non-streamed JSON response
       const data = await apiResponse.json();
       res.json(data);
     }
