@@ -177,14 +177,9 @@ app.use('/api', async (req, res) => {
   }
 });
 
-// 静态文件服务
-// All static assets are now served by express.static from the 'public' directory.
-// This catch-all for index.html should now point to the 'public' directory as well.
-app.get('*', (req, res) => {
-  // Check if the request is for a file that should exist in public (e.g. index.html)
-  // or if it's a route for a single-page application.
-  // For a simple setup, always serving index.html for non-API GET requests is common.
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+// Handle 404 for any unhandled routes
+app.use((req, res, next) => {
+  res.status(404).send("Sorry, can't find that!");
 });
 
 app.listen(PORT, () => {
