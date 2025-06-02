@@ -1,6 +1,5 @@
 document.addEventListener('DOMContentLoaded', () => {
     // DOM Elements
-    const logoutButton = document.getElementById('logoutButton');
     const profilesTableBody = document.querySelector('#profilesTable tbody');
     const showCreateProfileFormButton = document.getElementById('showCreateProfileForm');
     const profileEditorDiv = document.getElementById('profileEditor');
@@ -30,10 +29,22 @@ document.addEventListener('DOMContentLoaded', () => {
         setTimeout(() => { element.style.display = 'none'; }, 5000);
     }
 
+    function getCsrfToken() {
+        const cookieValue = document.cookie
+            .split('; ')
+            .find(row => row.startsWith('_csrf='))
+            ?.split('=')[1];
+        return cookieValue;
+    }
+
     // --- API Interaction ---
     async function fetchProfiles() {
         try {
-            const response = await fetch('/admin/profiles');
+            const response = await fetch('/admin/profiles', {
+                headers: {
+                    'X-CSRF-Token': getCsrfToken()
+                }
+            });
             if (!response.ok) {
                 const err = await response.json();
                 throw new Error(err.error || `HTTP error ${response.status}`);
@@ -49,24 +60,27 @@ document.addEventListener('DOMContentLoaded', () => {
     async function saveProfile(profileDataInternal, originalNameForEdit) {
         let response;
         try {
-            if (isEditMode) { // Update existing profile
-                // If profileNameInput.value (newName) is different from originalNameForEdit, it's a rename.
-                // The backend PUT /admin/profiles/:profileName handles renaming if 'newName' is in the body.
+            const headers = {
+                'Content-Type': 'application/json',
+                'X-CSRF-Token': getCsrfToken()
+            };
+
+            if (isEditMode) {
                 const body = { settings: profileDataInternal.settings };
                 if (profileNameInput.value.trim() !== originalNameForEdit) {
                     body.newName = profileNameInput.value.trim();
                 }
                 response = await fetch(`/admin/profiles/${encodeURIComponent(originalNameForEdit)}`, {
                     method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: headers,
                     body: JSON.stringify(body)
                 });
-            } else { // Create new profile
+            } else {
                 response = await fetch('/admin/profiles', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: headers,
                     body: JSON.stringify({
-                        name: profileDataInternal.profileNameInternal, // Use the internal name from form submission
+                        name: profileDataInternal.profileNameInternal,
                         settings: profileDataInternal.settings
                     })
                 });
@@ -78,12 +92,11 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             showMessage(messageEditorDiv, result.message || 'Profile saved successfully!', false);
             profileEditorDiv.style.display = 'none';
-            // Update currentProfilesData with the latest from the server response if available
             if (result.profiles && result.activeProfile !== undefined) {
                 currentProfilesData = { profiles: result.profiles, activeProfile: result.activeProfile };
                 renderProfilesTable();
             } else {
-                fetchProfiles(); // Fallback to refetch all
+                fetchProfiles();
             }
         } catch (error) {
             console.error('Error saving profile:', error);
@@ -95,17 +108,19 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!confirm(`Are you sure you want to delete profile "${profileNameToDelete}"?`)) return;
         try {
             const response = await fetch(`/admin/profiles/${encodeURIComponent(profileNameToDelete)}`, {
-                method: 'DELETE'
+                method: 'DELETE',
+                headers: {
+                    'X-CSRF-Token': getCsrfToken()
+                }
             });
             const result = await response.json();
             if (!response.ok) throw new Error(result.error || `HTTP error ${response.status}`);
             showMessage(messageGlobalDiv, result.message || `Profile "${profileNameToDelete}" deleted.`, false);
-            // Update currentProfilesData from response and re-render
             if (result.profiles && result.activeProfile !== undefined) {
                 currentProfilesData = { profiles: result.profiles, activeProfile: result.activeProfile };
                 renderProfilesTable();
             } else {
-                fetchProfiles(); // Fallback
+                fetchProfiles();
             }
         } catch (error) {
             console.error('Error deleting profile:', error);
@@ -116,17 +131,19 @@ document.addEventListener('DOMContentLoaded', () => {
     async function setActiveProfile(profileNameToActivate) {
         try {
             const response = await fetch(`/admin/profiles/${encodeURIComponent(profileNameToActivate)}/activate`, {
-                method: 'POST'
+                method: 'POST',
+                headers: {
+                    'X-CSRF-Token': getCsrfToken()
+                }
             });
             const result = await response.json();
             if (!response.ok) throw new Error(result.error || `HTTP error ${response.status}`);
             showMessage(messageGlobalDiv, result.message || `Profile "${profileNameToActivate}" set as active.`, false);
-            // Update active profile from response and re-render
             if (result.activeProfile !== undefined) {
                 currentProfilesData.activeProfile = result.activeProfile;
-                renderProfilesTable(); // Re-render to reflect new active status
+                renderProfilesTable();
             } else {
-                fetchProfiles(); // Fallback
+                fetchProfiles();
             }
         } catch (error) {
             console.error('Error activating profile:', error);
@@ -136,7 +153,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function doLogout() {
         try {
-            const response = await fetch('/admin/logout', { method: 'POST' });
+            const response = await fetch('/admin/logout', {
+                method: 'POST',
+                headers: {
+                    'X-CSRF-Token': getCsrfToken()
+                }
+            });
             const result = await response.json();
             if (response.ok) {
                 window.location.href = result.redirectTo || '/login.html';
@@ -150,7 +172,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- UI Rendering and Event Handlers ---
     function renderProfilesTable() {
-        profilesTableBody.innerHTML = ''; // Clear existing rows
+        profilesTableBody.innerHTML = '';
         const profiles = currentProfilesData.profiles || {};
         const activeProfileName = currentProfilesData.activeProfile;
 
@@ -198,14 +220,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function showProfileEditor(profileName = null, profileData = null) {
         profileEditorDiv.style.display = 'block';
-        profileForm.reset(); // Clear form
-        document.getElementById('apiKey').type = 'password'; // Reset API key visibility
+        profileForm.reset();
+        document.getElementById('apiKey').type = 'password';
 
-        if (profileName && profileData) { // Editing existing profile
+        if (profileName && profileData) {
             isEditMode = true;
             editorTitle.textContent = `Edit Profile: ${profileName}`;
             profileNameInput.value = profileName;
-            profileNameInput.readOnly = false; // Allow editing name for PUT, backend handles rename logic
+            profileNameInput.readOnly = false;
             profileNameOriginalInput.value = profileName;
 
             apiBaseUrlInput.value = profileData.API_BASE_URL || '';
@@ -213,7 +235,7 @@ document.addEventListener('DOMContentLoaded', () => {
             modelNameInput.value = profileData.MODEL_NAME || '';
             apiSystemPromptInput.value = profileData.API_SYSTEM_PROMPT || '';
             apiLogCheckbox.checked = profileData.API_LOG === true || profileData.API_LOG === 'true';
-        } else { // Creating new profile
+        } else {
             isEditMode = false;
             editorTitle.textContent = 'Create New Profile';
             profileNameInput.readOnly = false;
@@ -222,11 +244,17 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Event Listeners
+    const logoutButton = document.getElementById('logoutButton');
     if (logoutButton) logoutButton.addEventListener('click', doLogout);
 
     if (showCreateProfileFormButton) {
         showCreateProfileFormButton.addEventListener('click', () => showProfileEditor());
     }
+    
+    // Style improvements
+    document.querySelectorAll('button').forEach(button => {
+        button.classList.add('styled-button');
+    });
 
     if (cancelEditButton) {
         cancelEditButton.addEventListener('click', () => {
@@ -245,21 +273,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const settings = {
                 API_BASE_URL: apiBaseUrlInput.value.trim(),
-                API_KEY: apiKeyInput.value.trim(), // Key might be empty if user wants to clear it
-                MODEL_NAME: modelNameInput.value.trim(),
-                API_SYSTEM_PROMPT: apiSystemPromptInput.value.trim(),
-                API_LOG: apiLogCheckbox.checked
-            };
-            const settings = {
-                API_BASE_URL: apiBaseUrlInput.value.trim(),
                 API_KEY: apiKeyInput.value.trim(),
                 MODEL_NAME: modelNameInput.value.trim(),
                 API_SYSTEM_PROMPT: apiSystemPromptInput.value.trim(),
                 API_LOG: apiLogCheckbox.checked
             };
 
-            // For saveProfile, profileNameInternal is the *new* or current name from the form.
-            // originalNameForEdit is the name of the profile when editing started (used in PUT URL).
             saveProfile({ profileNameInternal: pName, settings: settings }, profileNameOriginalInput.value);
         });
     }
@@ -269,7 +288,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- Password Change Functionality ---
     const showChangePasswordFormButton = document.getElementById('showChangePasswordForm');
-    // const changePasswordSectionDiv = document.getElementById('changePasswordSection'); // Not strictly needed for this logic
     const changePasswordForm = document.getElementById('changePasswordForm');
     const currentPasswordInput = document.getElementById('currentPassword');
     const newPasswordInput = document.getElementById('newPassword');
@@ -315,7 +333,10 @@ document.addEventListener('DOMContentLoaded', () => {
             try {
                 const response = await fetch('/admin/change-password', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-Token': getCsrfToken()
+                    },
                     body: JSON.stringify({ currentPassword, newPassword })
                 });
                 const result = await response.json();

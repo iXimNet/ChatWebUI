@@ -20,13 +20,15 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
+        // CSRF Token fetching and sending logic removed
+
         try {
             const response = await fetch('/admin/login', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ password }),
+                body: JSON.stringify({ password }), // CSRF token removed from body
             });
 
             const result = await response.json();

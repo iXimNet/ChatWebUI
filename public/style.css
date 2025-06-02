@@ -243,3 +243,22 @@ body {
 .hidden {
     display: none;
 }
+
+/* Basic Mobile Responsiveness */
+@media (max-width: 480px) {
+    .input-area {
+        padding: 15px;
+    }
+    
+    .user-message {
+        margin-left: 10%;
+    }
+    
+    .assistant-message {
+        margin-right: 10%;
+    }
+    
+    #input {
+        font-size: 16px; /* Prevent zoom on iOS */
+    }
+}

@@ -1,0 +1,215 @@
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    margin: 0;
+    padding: 20px;
+    background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+    color: #333;
+    line-height: 1.6;
+    min-height: 100vh;
+}
+
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    background: white;
+    border-radius: 10px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+    padding: 25px;
+}
+
+h1, h2, h3 {
+    color: #2c3e50;
+    margin-top: 0;
+}
+
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-bottom: 15px;
+    border-bottom: 1px solid #eee;
+    margin-bottom: 25px;
+}
+
+.section {
+    margin-bottom: 30px;
+    padding: 20px;
+    background: #f9f9f9;
+    border-radius: 8px;
+    border: 1px solid #eee;
+}
+
+.styled-button {
+    background: #4a6cf7;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    padding: 10px 18px;
+    margin: 8px 5px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+.styled-button:hover {
+    background: #3a56e0;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+}
+
+.styled-button:active {
+    transform: translateY(0);
+}
+
+.btn-danger {
+    background: #e74c3c;
+}
+
+.btn-danger:hover {
+    background: #c0392b;
+}
+
+.btn-warning {
+    background: #f39c12;
+}
+
+.btn-warning:hover {
+    background: #d35400;
+}
+
+.btn-success {
+    background: #2ecc71;
+}
+
+.btn-success:hover {
+    background: #27ae60;
+}
+
+.message {
+    padding: 12px 15px;
+    margin: 15px 0;
+    border-radius: 6px;
+    font-size: 14px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.message.error {
+    background: #ffebee;
+    color: #c62828;
+}
+
+.message.success {
+    background: #e8f5e9;
+    color: #2e7d32;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    background: white;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+    margin: 20px 0;
+}
+
+/* Admin Header Styles */
+.admin-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px 0; /* Adjust padding as needed */
+    margin-bottom: 20px;
+    border-bottom: 1px solid #dee2e6;
+}
+.admin-header h1 {
+    margin: 0;
+    font-size: 1.8em; /* Slightly larger title */
+    color: #2c3e50; /* Match admin.css h1 color */
+}
+.admin-header #logoutForm {
+    margin: 0;
+}
+.admin-header #logoutButton {
+    background-color: #e74c3c; /* Match admin.css .btn-danger */
+    color: white;
+    border: none;
+    padding: 10px 15px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.9em;
+    transition: background-color 0.2s ease-in-out;
+}
+.admin-header #logoutButton:hover {
+    background-color: #c0392b; /* Match admin.css .btn-danger:hover */
+}
+/* End Admin Header Styles */
+
+th {
+    background: #4a6cf7;
+    color: white;
+    text-align: left;
+    padding: 12px 15px;
+    font-weight: 600;
+}
+
+td {
+    padding: 12px 15px;
+    border-bottom: 1px solid #eaeaea;
+}
+
+tr:hover {
+    background-color: #f8f9ff;
+}
+
+tr:last-child td {
+    border-bottom: none;
+}
+
+.form-group {
+    margin-bottom: 20px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 600;
+    color: #2c3e50;
+}
+
+.form-group input[type="text"],
+.form-group input[type="password"] {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 14px;
+    box-sizing: border-box;
+}
+
+.form-group input[type="checkbox"] {
+    margin-right: 8px;
+}
+
+#profileEditor {
+    display: none;
+    background: white;
+    padding: 25px;
+    border-radius: 10px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+    margin-top: 20px;
+    border: 1px solid #eee;
+}
+
+.actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.profile-actions {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 20px;
+}

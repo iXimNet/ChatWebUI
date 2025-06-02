@@ -1,11 +1,15 @@
 require('dotenv').config();
 const express = require('express');
-const cors =require('cors');
+const cors = require('cors');
 const path = require('path');
 const fs = require('fs').promises;
 const bcrypt = require('bcryptjs');
 const os = require('os');
 const session = require('express-session');
+const csrf = require('csurf');
+const cookieParser = require('cookie-parser'); // Added cookie-parser
+const { createProxyMiddleware } = require('http-proxy-middleware');
+const marked = require('marked');
 
 // Check for ADMIN_PASSWORD_HASH before initializing app
 let isInSetupMode = false;
@@ -63,7 +67,7 @@ async function getActiveConfig() {
 }
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 3001;
 
 let apilog = false; // Initialized to false, will be updated by active config
 
@@ -84,21 +88,39 @@ async function updateApiLogStatus() {
 // Core Middleware
 app.use(cors());
 app.use(express.json());
+app.use(cookieParser()); // Use cookie-parser before session and csrf
 
 // Static files middleware (serves setup.html, setup.js, style.css etc from public)
 app.use(express.static(path.join(__dirname, 'public')));
 
 // Session configuration - Place after static middleware and before routes that use sessions
 app.use(session({
-    secret: process.env.SESSION_SECRET || 'your_very_secure_secret_key_fallback', // Fallback only for dev
-    resave: false,
-    saveUninitialized: false,
+    secret: process.env.SESSION_SECRET || 'your_very_secure_secret_key_fallback',
+    resave: true,
+    saveUninitialized: true,
     cookie: {
         secure: process.env.NODE_ENV === 'production',
         httpOnly: true,
-        maxAge: 24 * 60 * 60 * 1000 // 24 hours
+        sameSite: 'strict',
+        maxAge: 24 * 60 * 60 * 1000
     }
 }));
+
+// CSRF protection middleware - TEMPORARILY DISABLED FOR DEBUGGING
+// const csrfProtection = csrf({ cookie: true });
+
+// app.use(csrfProtection);
+
+// app.get('/admin/csrf-token', (req, res) => {
+//     res.json({ csrfToken: req.csrfToken() });
+// });
+
+// app.use((req, res, next) => {
+//    if (req.csrfToken) { // Check if csrfToken function exists
+//        res.locals.csrfToken = req.csrfToken();
+//    }
+//    next();
+// });
 
 // Setup mode enforcement middleware
 app.use((req, res, next) => {
@@ -452,8 +474,6 @@ app.post('/admin/profiles/:profileName/activate', ensureAdmin, async (req, res) 
     }
 });
 
-// The old /admin/config GET and POST routes are now removed.
-
 // API代理路由 - now uses getActiveConfig()
 app.use('/api', async (req, res) => {
   try {
@@ -494,12 +514,12 @@ app.use('/api', async (req, res) => {
     // 构建符合OpenAI API规范的请求体
     const requestBody = {
       messages: messages,
-      model: process.env.MODEL_NAME || 'gpt-3.5-turbo',
+      model: activeConfig.MODEL_NAME || 'gpt-3.5-turbo',
       stream: true
     };
 
-    // 从环境变量中获取API key
-    const apiKey = process.env.API_KEY;
+    // 从活动配置中获取API key
+    const apiKey = activeConfig.API_KEY;
     if (!apiKey) {
       throw new Error('API_KEY未配置');
     }
@@ -619,9 +639,26 @@ app.use('/api', async (req, res) => {
   }
 });
 
+// Centralized error handling middleware
+app.use((err, req, res, next) => {
+  console.error(`[${new Date().toISOString()}] Error: ${err.message}`);
+  console.error(err.stack);
+  
+  const status = err.status || 500;
+  const errorResponse = {
+    error: err.message || 'Internal Server Error',
+    ...(process.env.NODE_ENV === 'development' && { stack: err.stack })
+  };
+  
+  res.status(status).json(errorResponse);
+});
+
 // Handle 404 for any unhandled routes
-app.use((req, res, next) => {
-  res.status(404).send("Sorry, can't find that!");
+app.use((req, res) => {
+  res.status(404).json({ 
+    error: "Resource not found",
+    path: req.path
+  });
 });
 
 app.listen(PORT, () => {

@@ -4,16 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Dashboard - Configuration Profiles</title>
-    <link rel="stylesheet" href="style.css"> <!-- Assuming general styles -->
+    <link rel="stylesheet" href="admin.css"> <!-- Using admin-specific styles -->
     <style>
+        /* Inline styles for admin-header will be moved to admin.css */
+        /* Retain other specific inline styles if necessary, or move them too. */
         body { font-family: sans-serif; margin: 0; background-color: #f8f9fa; color: #333; }
-        .navbar { background-color: #343a40; padding: 10px 20px; color: white; display: flex; justify-content: space-between; align-items: center; }
-        .navbar h1 { margin: 0; font-size: 1.5em; }
-        .navbar button { background-color: #dc3545; color: white; border: none; padding: 8px 12px; border-radius: 4px; cursor: pointer; }
-        .navbar button:hover { background-color: #c82333; }
-
         .container { padding: 20px; max-width: 1200px; margin: auto; }
-
+        
         .profiles-section, .editor-section, .password-section {
             background-color: #fff;
             padding: 20px;
@@ -57,12 +54,14 @@
     </style>
 </head>
 <body>
-    <div class="navbar">
-        <h1>Admin Dashboard</h1>
-        <button id="logoutButton" class="btn btn-danger">Logout</button>
-    </div>
-
     <div class="container">
+        <div class="admin-header">
+            <h1>Admin Dashboard</h1>
+            <form id="logoutForm" method="POST" action="/admin/logout">
+                <input type="hidden" name="_csrf" value="">
+                <button id="logoutButton" type="submit">Logout</button>
+            </form>
+        </div>
         <div id="messageGlobal" class="message"></div>
 
         <!-- Section for Listing Profiles -->
@@ -87,6 +86,7 @@
         <div id="profileEditor" class="editor-section">
             <h3 id="editorTitle">Create New Profile</h3>
             <form id="profileForm">
+                <input type="hidden" name="_csrf" value="">
                 <input type="hidden" id="profileNameOriginal" name="profileNameOriginal"> <!-- For renaming checks -->
                 <div class="form-group">
                     <label for="profileName">Profile Name:</label>
@@ -125,6 +125,7 @@
             <h2>Change Admin Password</h2>
             <button id="showChangePasswordForm" class="btn btn-secondary" style="margin-bottom:15px;">Change Admin Password</button>
             <form id="changePasswordForm" style="display:none;">
+                <input type="hidden" name="_csrf" value="">
                 <div class="form-group">
                     <label for="currentPassword">Current Password:</label>
                     <input type="password" id="currentPassword" name="currentPassword" required>
@@ -144,6 +145,24 @@
         </div>
     </div>
 
+    <script>
+        // Function to set CSRF tokens in all forms
+        function setCsrfTokens() {
+            const csrfToken = document.cookie
+                .split('; ')
+                .find(row => row.startsWith('_csrf='))
+                ?.split('=')[1];
+                
+            if (csrfToken) {
+                document.querySelectorAll('input[name="_csrf"]').forEach(input => {
+                    input.value = csrfToken;
+                });
+            }
+        }
+
+        // Set CSRF tokens on page load
+        document.addEventListener('DOMContentLoaded', setCsrfTokens);
+    </script>
     <script src="admin_dashboard.js"></script> <!-- New JS file for this dashboard -->
 </body>
 </html>

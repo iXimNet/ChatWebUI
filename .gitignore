@@ -12,3 +12,6 @@ config.json
 
 # macOS specific files
 .DS_Store
+
+# Memory bank docs
+memory-bank/
