@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - Configuration Profiles</title>
+    <link rel="stylesheet" href="style.css"> <!-- Assuming general styles -->
+    <style>
+        body { font-family: sans-serif; margin: 0; background-color: #f8f9fa; color: #333; }
+        .navbar { background-color: #343a40; padding: 10px 20px; color: white; display: flex; justify-content: space-between; align-items: center; }
+        .navbar h1 { margin: 0; font-size: 1.5em; }
+        .navbar button { background-color: #dc3545; color: white; border: none; padding: 8px 12px; border-radius: 4px; cursor: pointer; }
+        .navbar button:hover { background-color: #c82333; }
+
+        .container { padding: 20px; max-width: 1200px; margin: auto; }
+
+        .profiles-section, .editor-section, .password-section {
+            background-color: #fff;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.05);
+        }
+
+        h2 { margin-top: 0; color: #007bff; border-bottom: 2px solid #007bff; padding-bottom: 10px; }
+
+        table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+        th, td { text-align: left; padding: 12px; border-bottom: 1px solid #eee; }
+        th { background-color: #f0f0f0; }
+        td .actions button { margin-right: 5px; padding: 6px 10px; font-size: 0.9em; }
+
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; }
+        input[type="text"], input[type="password"], textarea, input[type="number"] {
+            width: calc(100% - 22px); /* Account for padding and border */
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        input[type="checkbox"] { margin-right: 5px; vertical-align: middle; }
+
+        .btn { padding: 10px 15px; border-radius: 4px; cursor: pointer; border: none; font-size: 1em; }
+        .btn-primary { background-color: #007bff; color: white; }
+        .btn-primary:hover { background-color: #0056b3; }
+        .btn-success { background-color: #28a745; color: white; }
+        .btn-danger { background-color: #dc3545; color: white; }
+        .btn-warning { background-color: #ffc107; color: black; }
+        .btn-secondary { background-color: #6c757d; color: white; }
+
+        #profileEditor { display: none; } /* Initially hidden */
+        #profileEditor h3 { margin-top: 0; }
+
+        .message { margin-top:10px; padding:10px; border-radius:4px; text-align:center; display:none; }
+        .success { background-color:#d4edda; color:#155724; }
+        .error { background-color:#f8d7da; color:#721c24; }
+
+    </style>
+</head>
+<body>
+    <div class="navbar">
+        <h1>Admin Dashboard</h1>
+        <button id="logoutButton" class="btn btn-danger">Logout</button>
+    </div>
+
+    <div class="container">
+        <div id="messageGlobal" class="message"></div>
+
+        <!-- Section for Listing Profiles -->
+        <div class="profiles-section">
+            <h2>Configuration Profiles</h2>
+            <button id="showCreateProfileForm" class="btn btn-primary" style="margin-bottom:15px;">Create New Profile</button>
+            <table id="profilesTable">
+                <thead>
+                    <tr>
+                        <th>Profile Name</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Profile rows will be injected here by JavaScript -->
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Section for Profile Editor Form (Create/Edit) -->
+        <div id="profileEditor" class="editor-section">
+            <h3 id="editorTitle">Create New Profile</h3>
+            <form id="profileForm">
+                <input type="hidden" id="profileNameOriginal" name="profileNameOriginal"> <!-- For renaming checks -->
+                <div class="form-group">
+                    <label for="profileName">Profile Name:</label>
+                    <input type="text" id="profileName" name="profileName" required>
+                </div>
+                <div class="form-group">
+                    <label for="apiBaseUrl">API Base URL:</label>
+                    <input type="text" id="apiBaseUrl" name="API_BASE_URL" required>
+                </div>
+                <div class="form-group">
+                    <label for="apiKey">API Key:</label>
+                    <input type="password" id="apiKey" name="API_KEY" required>
+                    <input type="checkbox" onclick="document.getElementById('apiKey').type = this.checked ? 'text' : 'password'"> Show Key
+                </div>
+                <div class="form-group">
+                    <label for="modelName">Model Name:</label>
+                    <input type="text" id="modelName" name="MODEL_NAME">
+                </div>
+                <div class="form-group">
+                    <label for="apiSystemPrompt">API System Prompt:</label>
+                    <textarea id="apiSystemPrompt" name="API_SYSTEM_PROMPT" rows="3"></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="apiLog">Enable API Log:</label>
+                    <input type="checkbox" id="apiLog" name="API_LOG">
+                </div>
+                <!-- PORT configuration is server-wide, not per-profile, so it's not here -->
+                <button type="submit" id="saveProfileButton" class="btn btn-success">Save Profile</button>
+                <button type="button" id="cancelEditButton" class="btn btn-secondary">Cancel</button>
+            </form>
+            <div id="messageEditor" class="message"></div>
+        </div>
+
+        <!-- Section for Changing Admin Password -->
+        <div class="password-section" id="changePasswordSection">
+            <h2>Change Admin Password</h2>
+            <button id="showChangePasswordForm" class="btn btn-secondary" style="margin-bottom:15px;">Change Admin Password</button>
+            <form id="changePasswordForm" style="display:none;">
+                <div class="form-group">
+                    <label for="currentPassword">Current Password:</label>
+                    <input type="password" id="currentPassword" name="currentPassword" required>
+                </div>
+                <div class="form-group">
+                    <label for="newPassword">New Password (min. 8 characters):</label>
+                    <input type="password" id="newPassword" name="newPassword" required minlength="8">
+                </div>
+                <div class="form-group">
+                    <label for="confirmNewPassword">Confirm New Password:</label>
+                    <input type="password" id="confirmNewPassword" name="confirmNewPassword" required>
+                </div>
+                <button type="submit" class="btn btn-warning">Update Password</button>
+                <button type="button" id="cancelChangePassword" class="btn btn-secondary">Cancel</button>
+            </form>
+            <div id="messagePassword" class="message"></div>
+        </div>
+    </div>
+
+    <script src="admin_dashboard.js"></script> <!-- New JS file for this dashboard -->
+</body>
+</html>
