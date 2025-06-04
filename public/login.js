@@ -5,13 +5,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function showMessage(message, isError = false) {
         messageDiv.textContent = message;
-        messageDiv.className = 'message ' + (isError ? 'error' : 'success');
-        messageDiv.style.display = 'block';
+        // Add 'message-visible' and either 'success' or 'error'
+        messageDiv.className = 'message message-visible ' + (isError ? 'error' : 'success');
+        // No longer need messageDiv.style.display as classes handle visibility of the styled box
     }
 
     loginForm.addEventListener('submit', async (event) => {
         event.preventDefault();
-        messageDiv.style.display = 'none';
+        // Clear previous message and hide the box by removing relevant classes
+        messageDiv.textContent = '';
+        messageDiv.className = 'message'; // Reset to base class
 
         const password = passwordInput.value;
 

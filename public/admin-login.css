@@ -94,13 +94,23 @@ button:active {
 }
 
 .message {
-    margin-top: 20px;
-    padding: 14px 18px;
+    /* Keep: styles that don't create an empty box */
     border-radius: 8px;
     text-align: center;
     font-weight: 500;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
     transition: all 0.3s ease;
+    /* Remove/Default: styles that create an empty box */
+    margin-top: 0;
+    padding: 0;
+    box-shadow: none;
+    border: none; /* Ensure no default border if success/error not present */
+    background: transparent; /* Ensure no default background */
+}
+
+.message-visible { /* New class to show the box */
+    margin-top: 20px;
+    padding: 14px 18px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
 }
 
 .message.success {
